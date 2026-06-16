@@ -143,9 +143,39 @@ Triển khai 3 metrics RAGAS bằng word-overlap heuristic:
 
 ## Sản phẩm nộp bài
 
+### Bắt buộc
 1. **`solution/solution.py`** — triển khai hoàn chỉnh tất cả TODO
 2. **`exercises.md`** — golden dataset 20 QA pairs (5E + 7M + 5H + 3A) + benchmark results + rubric design
 3. **`reflection.md`** — evaluation report: 3 worst failures với 5 Whys + improvement log + regression strategy
+
+### Bonus & demo (đã triển khai)
+4. **`golden_dataset.py`** — 20 QA pairs dùng chung cho benchmark, CI, và UI
+5. **`app.py`** — Streamlit dashboard tương tác
+6. **`scripts/ci_eval_gate.py`** + **`.github/workflows/eval.yml`** — CI/CD quality gate
+7. **`scripts/framework_compare.py`** — so sánh RAGAS heuristic vs `NgramEvaluator`
+8. **`demo_agents.py`** — `good_agent` (pass CI) và `mock_rag_agent` (demo failures)
+9. **`tests/test_bonus.py`** — kiểm thử custom metric và N-gram evaluator
+
+### Cấu trúc project
+
+```
+Day_14_RAG_Evaluation/
+├── solution/solution.py      # Core pipeline (Tasks 1–5 + bonus)
+├── golden_dataset.py         # 20 stratified QA pairs
+├── demo_agents.py            # Good vs mock RAG agents
+├── app.py                    # Streamlit demo UI
+├── exercises.md              # Lab worksheet + golden dataset tables
+├── reflection.md             # Evaluation report
+├── template.py               # Starter template (reference)
+├── requirements.txt          # streamlit, pytest
+├── scripts/
+│   ├── ci_eval_gate.py       # Local/CI quality gate
+│   └── framework_compare.py  # Framework A vs B comparison
+├── tests/
+│   ├── test_solution.py      # 32 core tests
+│   └── test_bonus.py         # 4 bonus tests
+└── .github/workflows/eval.yml
+```
 
 ---
 
@@ -161,52 +191,65 @@ Triển khai 3 metrics RAGAS bằng word-overlap heuristic:
 
 ---
 
-## Chạy kiểm thử
+## Chạy kiểm thử & demo
 
 ```bash
-pytest tests/ -v
-```
-
----
-
-## Streamlit Demo UI
-
-Interactive dashboard to explore the full evaluation pipeline:
-
-```bash
+# Cài dependencies
 pip install -r requirements.txt
+
+# Core + bonus tests (36 tests)
+pytest tests/ -v
+
+# CI quality gate (local)
+python scripts/ci_eval_gate.py
+
+# Framework comparison (RAGAS vs N-gram)
+python scripts/framework_compare.py
+
+# Streamlit interactive demo
 streamlit run app.py
 ```
 
-**Tabs:**
-- **Single Eval** — score one Q&A with all metrics + custom context utilization
-- **Benchmark** — run 20-case golden dataset with good/mock agents
-- **Failure Analysis** — categorize failures, root causes, improvement log
-- **Regression** — compare baseline vs candidate agent (0.05 drop threshold)
-- **Framework Compare** — RAGAS heuristic vs N-gram evaluator side-by-side
+**Streamlit tabs:**
+- **Single Eval** — score one Q&A + custom context utilization metric
+- **Benchmark** — run 20-case golden dataset (good/mock agents)
+- **Failure Analysis** — categories, root causes, improvement log
+- **Regression** — baseline vs candidate (0.05 drop threshold)
+- **Framework Compare** — RAGAS heuristic vs N-gram evaluator
 - **LLM Judge** — rubric scoring + bias detection demo
 
 ---
 
-## Bonus Features (implemented)
+## Bonus Features (đã hoàn thành)
 
-| Bonus | Location | How to run |
-|-------|----------|------------|
-| Framework comparison (+10) | `scripts/framework_compare.py`, `NgramEvaluator` in `solution/solution.py` | `python scripts/framework_compare.py` |
-| CI/CD integration (+5) | `.github/workflows/eval.yml`, `scripts/ci_eval_gate.py` | `python scripts/ci_eval_gate.py` |
-| Custom metric (+5) | `evaluate_context_utilization()` on `RAGASEvaluator` | Visible in Streamlit Single Eval tab |
+| Bonus | Điểm | Trạng thái | Location |
+|-------|------|------------|----------|
+| Framework comparison | +10 | ✅ Done | `NgramEvaluator` + `scripts/framework_compare.py` |
+| CI/CD integration | +5 | ✅ Done | `.github/workflows/eval.yml` + `scripts/ci_eval_gate.py` |
+| Custom metric | +5 | ✅ Done | `evaluate_context_utilization()` on `RAGASEvaluator` |
+| Streamlit demo UI | — | ✅ Done | `app.py` (6 tabs) |
+
+**Framework comparison (mock agent, avg overall):**
+- RAGAS heuristic: **0.40**
+- N-gram bigram overlap: **0.24** (stricter on phrase structure)
+
+**CI quality gate thresholds** (tuned for word-overlap heuristic):
+- Avg faithfulness ≥ 0.45, relevance ≥ 0.85, completeness ≥ 0.95, pass rate ≥ 55%
+- Adversarial cases must contain refusal keywords (`cannot`, `outside`, etc.)
 
 ---
 
 ## Danh sách kiểm tra nộp bài
 
-- [ ] `pytest tests/ -v` — tất cả kiểm thử đều pass
-- [ ] `overall_score` trên `EvalResult` đã triển khai
-- [ ] `run_regression` trên `BenchmarkRunner` đã triển khai
-- [ ] `generate_improvement_log` trên `FailureAnalyzer` đã triển khai
-- [ ] `exercises.md` — golden dataset 20 QA (stratified) + benchmark results + rubric design
-- [ ] `reflection.md` — evaluation report với 3 failure analyses (5 Whys) + improvement log + CI/CD strategy
-- [ ] `solution/solution.py` — bản sao template.py đã hoàn chỉnh
+- [x] `pytest tests/ -v` — **36/36** kiểm thử pass (32 core + 4 bonus)
+- [x] `overall_score` trên `EvalResult` đã triển khai
+- [x] `run_regression` trên `BenchmarkRunner` đã triển khai
+- [x] `generate_improvement_log` trên `FailureAnalyzer` đã triển khai
+- [x] `exercises.md` — golden dataset 20 QA (stratified) + benchmark results + rubric design
+- [x] `reflection.md` — evaluation report với 3 failure analyses (5 Whys) + improvement log + CI/CD strategy
+- [x] `solution/solution.py` — bản hoàn chỉnh từ template.py
+- [x] Bonus: framework comparison, CI/CD gate, custom metric
+- [x] Streamlit demo UI (`app.py`)
 
 ---
 
@@ -225,7 +268,7 @@ streamlit run app.py
 
 ## Bonus (thêm điểm)
 
-- Chạy 2 frameworks khác nhau trên cùng dataset và so sánh scores (+10)
-- Tích hợp evaluation vào CI/CD script (GitHub Actions hoặc tương tự) (+5)
-- Thêm custom metric ngoài 3 metrics cơ bản (+5)
-# Day_14_RAG_Evaluation
+- [x] Chạy 2 frameworks khác nhau trên cùng dataset và so sánh scores (+10) — `RAGASEvaluator` vs `NgramEvaluator`
+- [x] Tích hợp evaluation vào CI/CD script (GitHub Actions) (+5) — `.github/workflows/eval.yml`
+- [x] Thêm custom metric ngoài 3 metrics cơ bản (+5) — `evaluate_context_utilization()`
+- [x] Streamlit demo UI (extra) — `streamlit run app.py`

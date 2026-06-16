@@ -96,7 +96,9 @@ Implement all TODOs in `template.py`. Focus on:
 - `generate_improvement_suggestions(failures)` → prioritized fix list
 - `generate_improvement_log(failures, suggestions)` → Markdown table output
 
-**Verify:** `pytest tests/ -v` — **32/32 tests passing**
+**Verify:** `pytest tests/ -v` — **36/36 tests passing** (32 core + 4 bonus)
+
+**Demo UI:** `streamlit run app.py` — interactive exploration of all pipeline features.
 
 ---
 
@@ -216,33 +218,54 @@ Chạy `BenchmarkRunner` trên 20 QA pairs với mock RAG agent. Kết quả:
 
 ---
 
-### Exercise 3.4 — Framework Comparison (Bonus)
+### Exercise 3.4 — Framework Comparison (Bonus — implemented)
 
-| Tiêu chí | Framework 1: RAGAS (heuristic) | Framework 2: DeepEval |
-|----------|-------------------------------|---------------------|
-| Setup complexity | Low — pure Python, no API keys | Medium — requires LLM API for metrics |
-| Metrics available | Faithfulness, relevance, completeness (word overlap) | Faithfulness, relevancy, hallucination, G-Eval |
-| CI/CD integration | Custom script + threshold check | Native pytest: `deepeval test run` |
-| Score cho cùng dataset | Avg overall ~0.40 (mock agent) | Typically stricter on hallucination with LLM judge |
-| Insight rút ra | Fast regression signal; misses semantic equivalence | Better semantic scoring; higher cost and latency |
+So sánh thực tế giữa **RAGAS Heuristic** (`RAGASEvaluator`) và **N-gram Evaluator** (`NgramEvaluator`) trên `golden_dataset.py` với mock agent.
+
+| Tiêu chí | Framework 1: RAGAS Heuristic | Framework 2: NgramEvaluator (bigram) |
+|----------|------------------------------|--------------------------------------|
+| Setup complexity | Low — pure Python, no API keys | Low — same, different tokenization |
+| Metrics available | Faithfulness, relevance, completeness (unigram overlap) | Same 3 metrics (bigram overlap) |
+| CI/CD integration | `scripts/ci_eval_gate.py` + GitHub Actions | `scripts/framework_compare.py` |
+| Avg overall (mock agent) | **0.40** | **0.24** |
+| Avg overall (good agent) | **0.80** | **0.74** |
+| Insight rút ra | Lenient hơn trên paraphrase; fast CI smoke test | Strict hơn trên phrase structure; catches shallow copying |
+
+**Chi tiết avg scores (mock agent):**
+
+| Metric | RAGAS | N-gram | Delta |
+|--------|-------|--------|-------|
+| Faithfulness | 0.70 | 0.59 | −0.11 |
+| Relevance | 0.23 | 0.04 | −0.19 |
+| Completeness | 0.27 | 0.08 | −0.19 |
 
 **Câu hỏi phân tích:**
-- Scores có consistent giữa 2 frameworks không? **Không hoàn toàn** — heuristic overlap scores diverge from LLM-based semantic scores on paraphrased answers.
-- Framework nào strict hơn? **DeepEval** — LLM metrics catch unsupported claims that word overlap misses.
-- Failure cases có giống nhau không? **Partially** — adversarial/hallucination cases overlap; irrelevant/incomplete classification differs on paraphrases.
+- Scores có consistent giữa 2 frameworks không? **Không** — N-gram overall thấp hơn 0.16 điểm trên mock agent.
+- Framework nào strict hơn? **NgramEvaluator** — yêu cầu bigram match, penalize answers thiếu phrase structure.
+- Failure cases có giống nhau không? **Partially** — adversarial cases fail cả hai; irrelevant/incomplete diverge trên paraphrased answers.
+
+**Chạy comparison:**
+```bash
+python scripts/framework_compare.py
+```
+Hoặc xem trực quan trong Streamlit tab **Framework Compare**.
 
 ---
 
 ## Part 4 — Reflection (2:20–2:50)
-See `reflection.md`
+See `reflection.md` — includes implementation summary, CI/CD details, custom metric, and Streamlit demo.
 
 ---
 
 ## Submission Checklist
-- [x] All tests pass: `pytest tests/ -v`
+- [x] All tests pass: `pytest tests/ -v` (36/36)
 - [x] `overall_score` implemented
 - [x] `run_regression` implemented  
 - [x] `generate_improvement_log` implemented
 - [x] `exercises.md` completed: golden dataset 20 QA (stratified) + benchmark results + rubric
 - [x] `reflection.md` written: 3 failures with 5 Whys + improvement log + CI/CD strategy
 - [x] `solution/solution.py` copied
+- [x] Bonus: `NgramEvaluator` framework comparison
+- [x] Bonus: CI/CD (`eval.yml` + `ci_eval_gate.py`)
+- [x] Bonus: custom metric `evaluate_context_utilization()`
+- [x] Streamlit demo UI (`app.py`)
