@@ -1,274 +1,81 @@
-# Ngày 14 — AI Evaluation & Benchmarking Pipeline
+# 🚀 Lab Day 14: AI Evaluation Factory (Team Edition)
 
-**AICB-P1 · Phase 1 · Ngày 14 trong 15**
-
----
-
-## Mục tiêu
-
-Sau lab này, bạn sẽ:
-1. Xây dựng **pipeline đánh giá tự động** để benchmark AI agent trên 20 test cases
-2. Áp dụng các metrics lấy cảm hứng từ **RAGAS** (faithfulness, relevance, completeness)
-3. Triển khai **LLM-as-Judge** với rubric scoring 1–5 và phát hiện bias
-4. Thiết kế **golden dataset** với stratified sampling (easy/medium/hard/adversarial)
-5. Thực hiện **failure analysis** có hệ thống bằng 5 Whys và failure clustering
-6. Hiểu cách tích hợp evaluation vào **CI/CD** như quality gate
+## 🎯 Tổng quan
+"Nếu bạn không thể đo lường nó, bạn không thể cải thiện nó." — Nhiệm vụ của nhóm bạn là xây dựng một **Hệ thống đánh giá tự động** chuyên nghiệp để benchmark AI Agent. Hệ thống này phải chứng minh được bằng con số cụ thể: Agent đang tốt ở đâu và tệ ở đâu.
 
 ---
 
-## Bối Cảnh Lý Thuyết
-
-### Evaluation = Scientific Method Cho AI
-
-```
-Hypothesis → Experiment (chạy benchmark) → Measure (frameworks) → Conclude → Iterate
-```
-
-**Nguyên tắc:** Evaluation phải LẶP LẠI ĐƯỢC, SO SÁNH ĐƯỢC, và CHẠY TỰ ĐỘNG ĐƯỢC.
-
-### 3 Loại Evaluation
-
-| Loại | Khi nào | Tool |
-|------|---------|------|
-| **Offline** | Mỗi release, mỗi prompt change | RAGAS, DeepEval, TruLens |
-| **Online** | Continuous, real traffic | TruLens, Langfuse |
-| **Human** | Weekly, high-stakes | Annotation UI, spreadsheet |
-
-> ⚠️ Chỉ offline = không biết production quality. Chỉ human = không scale. Cần **kết hợp cả 3**.
-
-### 4 Nhóm Metrics
-
-| Nhóm | Metrics |
-|------|---------|
-| **Task Completion** | Binary pass/fail, partial credit, steps completed |
-| **Answer Quality** | Accuracy, completeness, coherence, citation accuracy |
-| **RAG-Specific** | Faithfulness, answer relevancy, context recall, context precision |
-| **Business** | User satisfaction, time saved, cost/interaction, adoption rate |
-
-### RAG Metrics Pipeline
-
-```
-Question → Retriever → Context → Generator → Answer
-              ↓            ↓          ↓           ↓
-         Context       Context   Faithfulness  Answer
-          Recall      Precision                Relevancy
-```
-
-**Cách đọc kết quả:**
-- Context Recall thấp → retrieve thiếu evidence
-- Context Precision thấp → retrieve thừa, noise nhiều
-- Faithfulness thấp → hallucinate (bịa thông tin)
-- Answer Relevancy thấp → trả lời lạc đề
-
-### LLM-as-Judge
-
-Sử dụng một LLM riêng (GPT-4, Claude) để chấm điểm response theo rubric:
-- Judge nhận: question + agent answer + reference answer + rubric
-- Judge trả về: score 1–5 + rationale (giải thích)
-- **Biases cần xử lý:** Position bias, Verbosity bias, Self-preference bias
-- **Best practice:** Multiple judges, randomize order, calibrate against human
-
-### Golden Dataset Design
-
-| Phân bổ 20 test cases | Mục đích |
-|----------------------|----------|
-| **5 Easy** | Factual lookup, single-doc |
-| **7 Medium** | Multi-step reasoning, 2–3 docs |
-| **5 Hard** | Complex/ambiguous, nhiều cách hiểu |
-| **3 Adversarial** | Out-of-scope, cố tình phá |
-
-### Failure Taxonomy
-
-| Loại | Triệu chứng | Root cause thường gặp |
-|------|-------------|----------------------|
-| `hallucination` | Bịa thông tin không có trong context | Faithfulness guardrail yếu |
-| `irrelevant` | Không giải quyết câu hỏi | Prompt ambiguous, routing sai |
-| `incomplete` | Bỏ sót thông tin quan trọng | Context window quá nhỏ, retrieval thiếu |
-| `off_topic` | Trả lời về chủ đề khác | Intent detection sai |
-| `refusal` | Từ chối khi nên trả lời | Guardrails quá chặt |
-
-### 5 Whys Method
-
-Phân tích root cause bằng cách hỏi "Tại sao?" liên tục cho đến khi tìm ra nguyên nhân gốc.
-Fix đúng root cause sẽ giải quyết hàng loạt failures tương tự.
-
-### 3 Evaluation Frameworks
-
-| Framework | Focus | Best for |
-|-----------|-------|----------|
-| **RAGAS** | RAG metrics chuẩn hóa | RAG pipeline CI/CD |
-| **DeepEval** | LLM unit testing (pytest-native) | CI/CD assertions, safety metrics |
-| **TruLens** | Feedback functions + production | Online + offline monitoring |
-
-### CI/CD Integration
-
-Framework + CI/CD = **quality gate** tự động:
-- Agent với faithfulness < 0.7 → không được deploy (giống failed unit test)
-- DeepEval: `deepeval test run test_eval.py` trong GitHub Actions
-- RAGAS/TruLens: custom script + threshold check
+## 🕒 Lịch trình thực hiện (4 Tiếng)
+- **Giai đoạn 1 (45'):** Thiết kế Golden Dataset & Script SDG. Tạo ra ít nhất 50 test cases chất lượng.
+- **Giai đoạn 2 (90'):** Phát triển Eval Engine (RAGAS, Custom Judge) & Async Runner.
+- **Giai đoạn 3 (60'):** Chạy Benchmark, Phân cụm lỗi (Failure Clustering) & Phân tích "5 Whys".
+- **Giai đoạn 4 (45'):** Tối ưu Agent dựa trên kết quả & Hoàn thiện báo cáo nộp bài.
 
 ---
 
-## Nhiệm Vụ
+## 🛠️ Các nhiệm vụ chính (Expert Mission)
 
-### Nhiệm vụ 1: Data Models — `QAPair` và `EvalResult`
-Định nghĩa các container dữ liệu cho evaluation pipeline.
-- `QAPair`: question, expected_answer, context, metadata
-- `EvalResult`: scores, passed flag, failure_type classification, overall_score()
+### 1. Retrieval & SDG (Nhóm Data)
+- **Retrieval Eval:** Tính toán Hit Rate và MRR cho Vector DB. Bạn phải chứng minh được Retrieval stage hoạt động tốt trước khi đánh giá Generation.
+- **SDG:** Tạo 50+ cases, bao gồm cả Ground Truth IDs của tài liệu để tính Hit Rate.
 
-### Nhiệm vụ 2: `RAGASEvaluator`
-Triển khai 3 metrics RAGAS bằng word-overlap heuristic:
-- `evaluate_faithfulness`: answer có grounded trong context không?
-- `evaluate_relevance`: answer có trả lời đúng question không?
-- `evaluate_completeness`: answer có cover hết expected answer không?
-- `run_full_eval`: chạy cả 3 metrics, xác định failure_type
+### 2. Multi-Judge Consensus Engine (Nhóm AI/Backend)
+- **Consensus logic:** Sử dụng ít nhất 2 model Judge khác nhau. 
+- **Calibration:** Tính toán hệ số đồng thuận (Agreement Rate) và xử lý xung đột điểm số tự động.
 
-### Nhiệm vụ 3: `LLMJudge`
-- `score_response`: dùng LLM để chấm response theo rubric (scoring 1–5)
-- `detect_bias`: phát hiện positional bias, leniency bias, severity bias trong batch scores
-
-### Nhiệm vụ 4: `BenchmarkRunner`
-- `run`: chạy tất cả QA pairs qua agent + evaluator
-- `generate_report`: tạo báo cáo tổng hợp (pass rate, avg scores, failure types)
-- `run_regression`: so sánh new results vs baseline, phát hiện regression (drop > 0.05)
-- `identify_failures`: lọc ra EvalResults có score dưới threshold
-
-### Nhiệm vụ 5: `FailureAnalyzer`
-- `categorize_failures`: nhóm failures theo type
-- `find_root_cause`: đề xuất root cause dựa trên score pattern
-- `generate_improvement_suggestions`: tạo danh sách fix ưu tiên
-- `generate_improvement_log`: xuất Markdown table cho failure tracking
+### 3. Regression Release Gate (Nhóm DevOps/Analyst)
+- **Delta Analysis:** So sánh kết quả của Agent phiên bản mới với phiên bản cũ.
+- **Auto-Gate:** Viết logic tự động quyết định "Release" hoặc "Rollback" dựa trên các chỉ số Chất lượng/Chi phí/Hiệu năng.
 
 ---
 
-## Sản phẩm nộp bài
-
-### Bắt buộc
-1. **`solution/solution.py`** — triển khai hoàn chỉnh tất cả TODO
-2. **`exercises.md`** — golden dataset 20 QA pairs (5E + 7M + 5H + 3A) + benchmark results + rubric design
-3. **`reflection.md`** — evaluation report: 3 worst failures với 5 Whys + improvement log + regression strategy
-
-### Bonus & demo (đã triển khai)
-4. **`golden_dataset.py`** — 20 QA pairs dùng chung cho benchmark, CI, và UI
-5. **`app.py`** — Streamlit dashboard tương tác
-6. **`scripts/ci_eval_gate.py`** + **`.github/workflows/eval.yml`** — CI/CD quality gate
-7. **`scripts/framework_compare.py`** — so sánh RAGAS heuristic vs `NgramEvaluator`
-8. **`demo_agents.py`** — `good_agent` (pass CI) và `mock_rag_agent` (demo failures)
-9. **`tests/test_bonus.py`** — kiểm thử custom metric và N-gram evaluator
-
-### Cấu trúc project
-
-```
-Day_14_RAG_Evaluation/
-├── solution/solution.py      # Core pipeline (Tasks 1–5 + bonus)
-├── golden_dataset.py         # 20 stratified QA pairs
-├── demo_agents.py            # Good vs mock RAG agents
-├── app.py                    # Streamlit demo UI
-├── exercises.md              # Lab worksheet + golden dataset tables
-├── reflection.md             # Evaluation report
-├── template.py               # Starter template (reference)
-├── requirements.txt          # streamlit, pytest
-├── scripts/
-│   ├── ci_eval_gate.py       # Local/CI quality gate
-│   └── framework_compare.py  # Framework A vs B comparison
-├── tests/
-│   ├── test_solution.py      # 32 core tests
-│   └── test_bonus.py         # 4 bonus tests
-└── .github/workflows/eval.yml
-```
+## 📤 Danh mục nộp bài (Submission Checklist)
+Nhóm nộp 1 đường dẫn Repository (GitHub/GitLab) chứa:
+1. [ ] **Source Code**: Toàn bộ mã nguồn hoàn chỉnh.
+2. [ ] **Reports**: File `reports/summary.json` và `reports/benchmark_results.json` (được tạo ra sau khi chạy `main.py`).
+3. [ ] **Group Report**: File `analysis/failure_analysis.md` (đã điền đầy đủ).
+4. [ ] **Individual Reports**: Các file `analysis/reflections/reflection_[Tên_SV].md`.
 
 ---
 
-## Hướng dẫn thời gian lab
+## 🏆 Bí kíp đạt điểm tuyệt đối (Expert Tips)
 
-| Thời gian | Hoạt động |
-|-----------|-----------|
-| 0:00–0:20 | **Warm-up:** Hiểu RAGAS thresholds + position bias (exercises.md Phần 1) |
-| 0:20–1:20 | **Core coding:** Triển khai tất cả TODO trong template.py |
-| 1:20–2:20 | **Extended:** Tạo golden dataset 20 QA, chạy benchmark, thiết kế rubric (exercises.md Phần 3) |
-| 2:20–2:50 | **Reflection:** Failure analysis 5 Whys + regression strategy (reflection.md) |
-| 2:50–3:00 | **Wrap-up:** Chạy pytest, copy solution, nộp bài |
+### ✅ Đánh giá Retrieval (15%)
+Nhóm nào chỉ đánh giá câu trả lời mà bỏ qua bước Retrieval sẽ không thể đạt điểm tối đa. Bạn cần biết chính xác chunk nào đang gây ra lỗi Hallucination.
+
+### ✅ Multi-Judge Reliability (20%)
+Việc chỉ tin vào một Judge (ví dụ GPT-4o) là một sai lầm trong sản phẩm thực tế. Hãy chứng minh hệ thống của bạn khách quan bằng cách so sánh nhiều Judge model và tính toán độ tin cậy của chúng.
+
+### ✅ Tối ưu hiệu năng & Chi phí (15%)
+Hệ thống Expert phải chạy cực nhanh (Async) và phải có báo cáo chi tiết về "Giá tiền cho mỗi lần Eval". Hãy đề xuất cách giảm 30% chi phí eval mà không giảm độ chính xác.
+
+### ✅ Phân tích nguyên nhân gốc rễ (Root Cause) (20%)
+Báo cáo 5 Whys phải chỉ ra được lỗi nằm ở đâu: Ingestion pipeline, Chunking strategy, Retrieval, hay Prompting.
 
 ---
 
-## Chạy kiểm thử & demo
+## 🔧 Hướng dẫn chạy
 
 ```bash
-# Cài dependencies
+# 1. Cài đặt dependencies
 pip install -r requirements.txt
 
-# Core + bonus tests (36 tests)
-pytest tests/ -v
+# 2. Tạo Golden Dataset (chạy trước khi benchmark)
+python data/synthetic_gen.py
 
-# CI quality gate (local)
-python scripts/ci_eval_gate.py
+# 3. Chạy Benchmark & tạo reports
+python main.py
 
-# Framework comparison (RAGAS vs N-gram)
-python scripts/framework_compare.py
-
-# Streamlit interactive demo
-streamlit run app.py
+# 4. Kiểm tra định dạng trước khi nộp
+python check_lab.py
 ```
 
-**Streamlit tabs:**
-- **Single Eval** — score one Q&A + custom context utilization metric
-- **Benchmark** — run 20-case golden dataset (good/mock agents)
-- **Failure Analysis** — categories, root causes, improvement log
-- **Regression** — baseline vs candidate (0.05 drop threshold)
-- **Framework Compare** — RAGAS heuristic vs N-gram evaluator
-- **LLM Judge** — rubric scoring + bias detection demo
-
 ---
 
-## Bonus Features (đã hoàn thành)
-
-| Bonus | Điểm | Trạng thái | Location |
-|-------|------|------------|----------|
-| Framework comparison | +10 | ✅ Done | `NgramEvaluator` + `scripts/framework_compare.py` |
-| CI/CD integration | +5 | ✅ Done | `.github/workflows/eval.yml` + `scripts/ci_eval_gate.py` |
-| Custom metric | +5 | ✅ Done | `evaluate_context_utilization()` on `RAGASEvaluator` |
-| Streamlit demo UI | — | ✅ Done | `app.py` (6 tabs) |
-
-**Framework comparison (mock agent, avg overall):**
-- RAGAS heuristic: **0.40**
-- N-gram bigram overlap: **0.24** (stricter on phrase structure)
-
-**CI quality gate thresholds** (tuned for word-overlap heuristic):
-- Avg faithfulness ≥ 0.45, relevance ≥ 0.85, completeness ≥ 0.95, pass rate ≥ 55%
-- Adversarial cases must contain refusal keywords (`cannot`, `outside`, etc.)
+## ⚠️ Lưu ý quan trọng
+- **Bắt buộc** chạy `python data/synthetic_gen.py` trước để tạo file `data/golden_set.jsonl`. File này không được commit sẵn trong repo.
+- Trước khi nộp bài, hãy chạy `python check_lab.py` để đảm bảo định dạng dữ liệu đã chuẩn. Bất kỳ lỗi định dạng nào dẫn đến việc script chấm điểm tự động không chạy được sẽ bị trừ 5 điểm thủ tục.
+- File `.env` chứa API Key **KHÔNG** được push lên GitHub.
 
 ---
-
-## Danh sách kiểm tra nộp bài
-
-- [x] `pytest tests/ -v` — **36/36** kiểm thử pass (32 core + 4 bonus)
-- [x] `overall_score` trên `EvalResult` đã triển khai
-- [x] `run_regression` trên `BenchmarkRunner` đã triển khai
-- [x] `generate_improvement_log` trên `FailureAnalyzer` đã triển khai
-- [x] `exercises.md` — golden dataset 20 QA (stratified) + benchmark results + rubric design
-- [x] `reflection.md` — evaluation report với 3 failure analyses (5 Whys) + improvement log + CI/CD strategy
-- [x] `solution/solution.py` — bản hoàn chỉnh từ template.py
-- [x] Bonus: framework comparison, CI/CD gate, custom metric
-- [x] Streamlit demo UI (`app.py`)
-
----
-
-## Chấm điểm
-
-| Tiêu chí | Điểm |
-|----------|------|
-| Tất cả kiểm thử pytest đều pass | 50 |
-| Golden dataset 20 QA với stratified sampling đúng chuẩn | 15 |
-| LLM-as-Judge rubric design có tiêu chí rõ ràng | 10 |
-| Failure analysis (5 Whys) + improvement log | 15 |
-| Chất lượng code, type hints, và regression strategy | 10 |
-| **Tổng** | **100** |
-
----
-
-## Bonus (thêm điểm)
-
-- [x] Chạy 2 frameworks khác nhau trên cùng dataset và so sánh scores (+10) — `RAGASEvaluator` vs `NgramEvaluator`
-- [x] Tích hợp evaluation vào CI/CD script (GitHub Actions) (+5) — `.github/workflows/eval.yml`
-- [x] Thêm custom metric ngoài 3 metrics cơ bản (+5) — `evaluate_context_utilization()`
-- [x] Streamlit demo UI (extra) — `streamlit run app.py`
+*Chúc nhóm bạn xây dựng được một Evaluation Factory thực sự mạnh mẽ!*
